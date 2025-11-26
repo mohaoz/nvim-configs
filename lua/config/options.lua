@@ -1,3 +1,6 @@
+vim.g.mapleader = " "
+vim.g.maplocalleader = "\\"
+
 local o = vim.opt
 o.tabstop = 4
 o.shiftwidth = 4
