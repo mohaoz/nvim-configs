@@ -1,13 +1,26 @@
 local k = vim.keymap
-opts = {
+local opts = {
   silent = true,
   noremap = true,
 }
-k.set("n", "<leader>e", ":NvimTreeToggle<CR>", opts)
+
+k.set("n", "<leader>e", function()
+  require("mini.files").open(vim.api.nvim_buf_get_name(0))
+end, opts)
 k.set("n", "<leader>r", ":CompetiTest run<CR>", opts)
 
 k.set("n", "j", "v:count == 0 ? 'gj' : 'j'", { expr = true, silent = true})
 k.set("n", "k", "v:count == 0 ? 'gk' : 'k'", { expr = true, silent = true})
+
+k.set("i", "<C-Space>", function()
+  require("mini.completion").complete()
+end, opts)
+k.set("i", "<CR>", function()
+  if vim.fn.pumvisible() == 1 then
+    return require("mini.completion").confirm()
+  end
+  return "<CR>"
+end, { expr = true, silent = true })
 
 k.set("n", "<C-h>", "<C-w>h", opts)
 k.set("n", "<C-j>", "<C-w>j", opts)
