@@ -12,16 +12,6 @@ k.set("n", "<leader>r", ":CompetiTest run<CR>", opts)
 k.set("n", "j", "v:count == 0 ? 'gj' : 'j'", { expr = true, silent = true})
 k.set("n", "k", "v:count == 0 ? 'gk' : 'k'", { expr = true, silent = true})
 
-k.set("i", "<C-Space>", function()
-  require("mini.completion").complete()
-end, opts)
-k.set("i", "<CR>", function()
-  if vim.fn.pumvisible() == 1 then
-    return require("mini.completion").confirm()
-  end
-  return "<CR>"
-end, { expr = true, silent = true })
-
 k.set("n", "<C-h>", "<C-w>h", opts)
 k.set("n", "<C-j>", "<C-w>j", opts)
 k.set("n", "<C-k>", "<C-w>k", opts)
