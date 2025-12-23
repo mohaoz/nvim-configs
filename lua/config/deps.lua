@@ -15,7 +15,7 @@ MiniDeps.setup({
   },
 })
 
-local add, now = MiniDeps.add, MiniDeps.now
+local add, now, later = MiniDeps.add, MiniDeps.now, MiniDeps.later
 
 add({ source = "catppuccin/nvim", name = "catppuccin" })
 now(function()
@@ -33,34 +33,8 @@ end)
 -- lua/config/deps.lua
 
 -- ... 在 catppuccin 配置之后添加
-now(function()
-  local statusline = require('mini.statusline')
-  statusline.setup({
-    content = {
-      -- 重新定义活跃窗口的状态栏内容，让它更轻盈、高端
-      active = function()
-        local mode, mode_hl = statusline.section_mode({ trunc_width = 120 })
-        local git           = statusline.section_git({ trunc_width = 75 })
-        local diff          = statusline.section_diff({ trunc_width = 75 })
-        local diagnostics   = statusline.section_diagnostics({ trunc_width = 75 })
-        local lsp           = statusline.section_lsp({ trunc_width = 75 })
-        local filename      = statusline.section_filename({ trunc_width = 140 })
-        local fileinfo      = statusline.section_fileinfo({ trunc_width = 120 })
-        local location      = statusline.section_location({ trunc_width = 75 })
-
-        return statusline.combine_groups({
-          { hl = mode_hl,                  strings = { mode } },
-          { hl = 'MiniStatuslineDevinfo',  strings = { git, diff, diagnostics, lsp } },
-          '%<', -- 截断点
-          { hl = 'MiniStatuslineFilename', strings = { filename } },
-          '%=', -- 左右对齐切换点
-          { hl = 'MiniStatuslineFileinfo', strings = { fileinfo } },
-          { hl = mode_hl,                  strings = { location } },
-        })
-      end
-    },
-    set_vim_settings = false, -- 我们已经在 options.lua 里手动设过了
-  })
+later(function()
+  require('mini.statusline').setup()
 end)
 
 
@@ -122,7 +96,7 @@ now(function()
     },
     compile_command = {
       cpp = {
-        exec = "g++-15",
+        exec = "g++",
         args = {
           "-Wall",
           "$(FNAME)",
@@ -183,3 +157,4 @@ now(function()
   }
   vim.lsp.enable("clangd")
 end)
+
