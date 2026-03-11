@@ -75,7 +75,7 @@ add({
 })
 now(function()
   require("nvim-treesitter.configs").setup({
-    ensure_installed = { "cpp" },
+    ensure_installed = { "cpp" , "zig" },
     highlight = {
       enable = true,
     },
@@ -92,11 +92,11 @@ add({
 now(function()
   require("competitest").setup({
     template_file = {
-      cpp = "~/Code/.template.cpp",
+      cpp = "~/code/.template.cpp",
     },
     compile_command = {
       cpp = {
-        exec = "g++",
+        exec = "/opt/homebrew/bin/g++-15",
         args = {
           "-Wall",
           "$(FNAME)",
@@ -153,8 +153,49 @@ now(function()
     cmd = {
       "clangd",
       "--header-insertion=never",
+      "--query-driver=/opt/homebrew/bin/g++-15"
     },
   }
   vim.lsp.enable("clangd")
+  -- 配置一下 Zig
+  -- don't show parse errors in a separate window
+  vim.g.zig_fmt_parse_errors = 0
+  -- disable format-on-save from `ziglang/zig.vim`
+  vim.g.zig_fmt_autosave = 0
+  -- enable  format-on-save from vim.lsp + ZLS
+  --
+  -- Formatting with ZLS matches `zig fmt`.
+  vim.api.nvim_create_autocmd('BufWritePre',{
+    pattern = {"*.zig", "*.zon"},
+    callback = function(ev)
+      vim.lsp.buf.format()
+    end
+  })
+
+  vim.lsp.config['zls'] = {
+    -- Set to 'zls' if `zls` is in your PATH
+    cmd = { '/opt/homebrew/bin/zls' },
+    filetypes = { 'zig' },
+    root_markers = { 'build.zig' },
+    -- There are two ways to set config options:
+    --   - edit your `zls.json` that applies to any editor that uses ZLS
+    --   - set in-editor config options with the `settings` field below.
+    --
+    -- Further information on how to configure ZLS:
+    -- https://zigtools.org/zls/configure/
+    settings = {
+      zls = {
+        -- Whether to enable build-on-save diagnostics
+        --
+        -- Further information about build-on save:
+        -- https://zigtools.org/zls/guides/build-on-save/
+        -- enable_build_on_save = true,
+
+        -- omit the following line if `zig` is in your PATH
+        zig_exe_path = '/opt/homebrew/bin/zig'
+      }
+    },
+  }
+  vim.lsp.enable('zls')
 end)
 
