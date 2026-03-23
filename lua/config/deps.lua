@@ -138,7 +138,14 @@ now(function()
     update_in_insert = false, -- 只有退出插入模式时才更新报错，避免打字时视觉干扰
   })
   require("mini.completion").setup({
-    lsp_completion = { source_func = "omnifunc" },
+    lsp_completion = {
+      source_func = "omnifunc",
+      process_items = function(items, base)
+        return MiniCompletion.default_process_items(items, base, {
+          filtersort = "fuzzy",
+        })
+      end,
+    },
     window = {
       info = { border = "rounded" },
       signature = { border = "rounded" },
