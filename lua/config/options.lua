@@ -16,5 +16,5 @@ o.showmode = false
 o.showcmd = false
 o.cmdheight = 0
 o.signcolumn = "no"
-o.shortmess:append("Ic") -- 减少不必要的补全和写入消息，防止撑开隐藏的命令行
+o.shortmess:append("Ic") 
 o.completeopt = "menuone,noinsert,fuzzy"

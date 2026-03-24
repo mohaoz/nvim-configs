@@ -1,4 +1,4 @@
 require("config.options")
-require("config.deps")
+require("plugin.deps")
 require("config.keymaps")
 require("config.autocmds")
