@@ -71,7 +71,7 @@ add({
 })
 now(function()
   require("nvim-treesitter.configs").setup({
-    ensure_installed = { "cpp" , "zig" },
+    ensure_installed = { "cpp" , "zig", "python"},
     highlight = {
       enable = true,
     },
@@ -180,5 +180,30 @@ now(function()
     },
   }
   vim.lsp.enable('zls')
+
+    vim.lsp.config["pyright"] = {
+    capabilities = capabilities,
+    cmd = { "pyright-langserver", "--stdio" },
+    filetypes = { "python" },
+    root_markers = {
+      "pyproject.toml",
+      "pyrightconfig.json",
+      "requirements.txt",
+      ".git",
+    },
+    settings = {
+      pyright = {
+        disableOrganizeImports = false,
+      },
+      python = {
+        analysis = {
+          typeCheckingMode = "basic",
+          autoSearchPaths = true,
+          useLibraryCodeForTypes = true,
+        },
+      },
+    },
+  }
+  vim.lsp.enable("pyright")
 end)
 
