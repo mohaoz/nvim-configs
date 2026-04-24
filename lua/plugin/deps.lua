@@ -1,5 +1,7 @@
 local data = vim.fn.stdpath("data")
 local mini_path = data .. "/site/pack/deps/start/mini.nvim"
+local treesitter_root_dir = data .. "/treesitter"
+local nvim_treesitter_path = data .. "/site/pack/deps/pack/deps/opt/nvim-treesitter"
 
 if not (vim.uv or vim.loop).fs_stat(mini_path) then
   vim.fn.system({ "git", "clone", "--filter=blob:none", "https://github.com/echasnovski/mini.nvim", mini_path })
@@ -14,6 +16,9 @@ MiniDeps.setup({
     state = data .. "/deps",
   },
 })
+
+vim.opt.runtimepath:prepend(treesitter_root_dir)
+vim.opt.runtimepath:append(nvim_treesitter_path)
 
 local add, now, later = MiniDeps.add, MiniDeps.now, MiniDeps.later
 
@@ -64,22 +69,6 @@ add({ source = "echasnovski/mini.pairs" })
 now(function()
   require("mini.pairs").setup()
 end, { source = "echasnovski/mini.pairs" })
-
-add({
-  source = "nvim-treesitter/nvim-treesitter",
-  checkout = "master",
-})
-now(function()
-  require("nvim-treesitter.configs").setup({
-    ensure_installed = { "cpp" , "zig", "python"},
-    highlight = {
-      enable = true,
-    },
-    indent = {
-      enable = true,
-    },
-  })
-end, { source = "nvim-treesitter/nvim-treesitter" })
 
 add({
   source = "xeluxee/competitest.nvim",
@@ -148,7 +137,7 @@ now(function()
     },
   })
 
-  local capabilities = vim.lsp.protocol.make_client_capabilities()
+  local capabilities = require("mini.completion").get_lsp_capabilities()
 
   vim.lsp.config["clangd"] = {
     capabilities = capabilities,
@@ -165,7 +154,7 @@ now(function()
   vim.api.nvim_create_autocmd('BufWritePre',{
     pattern = {"*.zig", "*.zon"},
     callback = function(ev)
-      vim.lsp.buf.format()
+      vim.lsp.buf.format({ bufnr = ev.buf })
     end
   })
 
@@ -206,4 +195,3 @@ now(function()
   }
   vim.lsp.enable("pyright")
 end)
-

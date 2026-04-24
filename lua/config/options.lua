@@ -6,6 +6,7 @@ o.tabstop = 4
 o.shiftwidth = 4
 o.expandtab = true
 o.autoindent = true
+o.smartindent = true
 o.number = true
 o.relativenumber = true
 
