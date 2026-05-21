@@ -2,28 +2,157 @@ local data = vim.fn.stdpath("data")
 local mini_path = data .. "/site/pack/deps/start/mini.nvim"
 local treesitter_root_dir = data .. "/treesitter"
 local nvim_treesitter_path = data .. "/site/pack/deps/pack/deps/opt/nvim-treesitter"
-local is_windows = vim.fn.has("win32") == 1
-local ucrt_bin = "C:/msys64/ucrt64/bin"
-local msys_bin = "C:/msys64/usr/bin"
-local git = is_windows and (msys_bin .. "/git.exe") or "git"
-local cpp_compiler = is_windows and (ucrt_bin .. "/g++.exe")
-  or (vim.fn.exepath("g++") ~= "" and vim.fn.exepath("g++") or "/opt/homebrew/bin/g++-15")
+local uv = vim.uv or vim.loop
+local sysname = uv.os_uname().sysname or ""
+local is_macos = sysname == "Darwin"
+local is_msys = sysname:find("^MINGW") ~= nil or sysname:find("^MSYS") ~= nil or vim.env.MSYSTEM ~= nil
+local is_windows = vim.fn.has("win32") == 1 or sysname == "Windows_NT" or is_msys
+local is_termux = vim.fn.stdpath("config"):find("com.termux", 1, true) ~= nil
+  or (vim.env.PREFIX or ""):find("com.termux", 1, true) ~= nil
 
-if not (vim.uv or vim.loop).fs_stat(mini_path) then
+local function fs_exists(path)
+  return type(path) == "string" and path ~= "" and uv.fs_stat(path) ~= nil
+end
+
+local function executable_path(command)
+  if command == nil or command == "" then
+    return nil
+  end
+
+  if command:find("[/\\]") ~= nil then
+    return fs_exists(command) and command or nil
+  end
+
+  local path = vim.fn.exepath(command)
+  return path ~= "" and path or nil
+end
+
+local function first_executable(candidates)
+  for _, command in ipairs(candidates) do
+    local path = executable_path(command)
+    if path ~= nil then
+      return path
+    end
+  end
+end
+
+local function first_file(candidates)
+  for _, path in ipairs(candidates) do
+    local expanded = vim.fn.expand(path)
+    if fs_exists(expanded) then
+      return expanded
+    end
+  end
+end
+
+local msys_prefixes = {
+  "C:/msys64/ucrt64",
+  "C:/msys64/mingw64",
+  "C:/msys64/clang64",
+  "/ucrt64",
+  "/mingw64",
+  "/clang64",
+}
+
+if vim.env.MSYSTEM_PREFIX ~= nil and vim.env.MSYSTEM_PREFIX ~= "" then
+  table.insert(msys_prefixes, 1, vim.env.MSYSTEM_PREFIX)
+end
+
+if vim.env.MINGW_PREFIX ~= nil and vim.env.MINGW_PREFIX ~= "" then
+  table.insert(msys_prefixes, 1, vim.env.MINGW_PREFIX)
+end
+
+local function msys_bin_candidates(executable)
+  local candidates = {}
+  for _, prefix in ipairs(msys_prefixes) do
+    if prefix ~= nil and prefix ~= "" then
+      table.insert(candidates, prefix .. "/bin/" .. executable)
+    end
+  end
+  return candidates
+end
+
+local function cpp_compiler_candidates()
+  if is_windows then
+    local candidates = msys_bin_candidates("g++.exe")
+    vim.list_extend(candidates, { "g++.exe", "g++" })
+    return candidates
+  end
+
+  if is_macos then
+    return {
+      "/opt/homebrew/bin/g++-15",
+      "/usr/local/bin/g++-15",
+      "g++-15",
+      "/opt/homebrew/bin/g++-14",
+      "/usr/local/bin/g++-14",
+      "g++-14",
+      "g++",
+    }
+  end
+
+  return { "g++-15", "g++-14", "g++-13", "g++" }
+end
+
+local git = first_executable(vim.list_extend({
+  "git",
+  "git.exe",
+  "C:/msys64/usr/bin/git.exe",
+  "/usr/bin/git.exe",
+}, msys_bin_candidates("git.exe"))) or "git"
+local cpp_compiler = first_executable(cpp_compiler_candidates()) or "g++"
+local cpp_executable = "$(FNOEXT)" .. (is_windows and ".exe" or "")
+local cpp_template = first_file({
+  "~/code/.template.cpp",
+  "~/Library/Mobile Documents/com~apple~CloudDocs/code/.template.cpp",
+})
+
+local function has_stdcpp_exp(compiler)
+  if compiler == nil or compiler == "" then
+    return false
+  end
+
+  local output = vim.trim(vim.fn.system({ compiler, "-print-file-name=libstdc++exp.a" }))
+  return vim.v.shell_error == 0 and output ~= "" and output ~= "libstdc++exp.a" and fs_exists(output)
+end
+
+local function cpp_compile_args()
+  local args = {
+    "-Wall",
+    "$(FNAME)",
+    "-o",
+    cpp_executable,
+    "-std=gnu++23",
+  }
+
+  if has_stdcpp_exp(cpp_compiler) then
+    table.insert(args, "-lstdc++exp")
+  end
+
+  return args
+end
+
+if not fs_exists(mini_path) then
   vim.fn.system({ git, "clone", "--filter=blob:none", "https://github.com/echasnovski/mini.nvim", mini_path })
 end
 
 do
   local mini_files_path = mini_path .. "/lua/mini/files.lua"
-  local lines = vim.fn.readfile(mini_files_path)
+  local ok, lines = pcall(vim.fn.readfile, mini_files_path)
   local original = "H.is_windows = vim.loop.os_uname().sysname == 'Windows_NT'"
   local patched = "do local sysname = vim.loop.os_uname().sysname; H.is_windows = sysname == 'Windows_NT' or sysname:find('^MINGW') ~= nil or sysname:find('^MSYS') ~= nil end"
 
-  for i, line in ipairs(lines) do
-    if line == original then
-      lines[i] = patched
-      vim.fn.writefile(lines, mini_files_path)
-      break
+  if is_msys and ok then
+    for i, line in ipairs(lines) do
+      if line == patched then
+        break
+      end
+
+      if line == original then
+        lines[i] = patched
+        vim.fn.writefile(lines, mini_files_path)
+        break
+      end
     end
   end
 end
@@ -127,27 +256,28 @@ add({
   depends = { "MunifTanjim/nui.nvim" },
 })
 now(function()
-  require("competitest").setup({
-    template_file = {
-      cpp = vim.fn.expand("~/code/.template.cpp"),
-    },
+  local competitest_config = {
     compile_command = {
       cpp = {
         exec = cpp_compiler,
-        args = {
-          "-Wall",
-          "$(FNAME)",
-          "-o",
-          "$(FNOEXT)",
-          "-std=gnu++23",
-          "-lstdc++exp",
-        },
+        args = cpp_compile_args(),
       },
     },
-  })
+    run_command = {
+      cpp = { exec = "./" .. cpp_executable },
+    },
+  }
+
+  if cpp_template ~= nil then
+    competitest_config.template_file = {
+      cpp = cpp_template,
+    }
+  end
+
+  require("competitest").setup(competitest_config)
 end, { source = "xeluxee/competitest.nvim" })
 
-if not vim.fn.stdpath("config"):find("com.termux") then
+if not is_termux then
   add({ source = "mistricky/codesnap.nvim" })
   now(function()
     require("codesnap").setup({
@@ -195,16 +325,19 @@ now(function()
 
   local capabilities = require("mini.completion").get_lsp_capabilities()
 
-  vim.lsp.config["clangd"] = {
-    capabilities = capabilities,
-    filetypes = { "c", "cpp", "objc", "objcpp", "cuda", "proto" },
-    cmd = {
-      "clangd",
-      "--header-insertion=never",
-      "--query-driver=" .. cpp_compiler,
-    },
-  }
-  vim.lsp.enable("clangd")
+  local clangd = first_executable({ "clangd", "clangd.exe" })
+  if clangd ~= nil then
+    vim.lsp.config["clangd"] = {
+      capabilities = capabilities,
+      filetypes = { "c", "cpp", "objc", "objcpp", "cuda", "proto" },
+      cmd = {
+        clangd,
+        "--header-insertion=never",
+        "--query-driver=" .. cpp_compiler,
+      },
+    }
+    vim.lsp.enable("clangd")
+  end
 
   vim.g.zig_fmt_parse_errors = 0
   vim.g.zig_fmt_autosave = 0
