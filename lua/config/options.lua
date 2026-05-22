@@ -18,4 +18,4 @@ o.showcmd = false
 o.cmdheight = 0
 o.signcolumn = "no"
 o.shortmess:append("Ic")
-o.completeopt = "menuone,noinsert,noselect,popup,fuzzy"
+o.completeopt = "menuone,noinsert,popup,fuzzy"

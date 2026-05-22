@@ -18,7 +18,11 @@ k.set("n", "<C-k>", "<C-w>k", opts)
 k.set("n", "<C-l>", "<C-w>l", opts)
 
 _G.cr_action = function()
-  if vim.fn.complete_info({ "selected" }).selected ~= -1 then
+  if vim.fn.pumvisible() == 1 then
+    if vim.fn.complete_info({ "selected" }).selected == -1 then
+      return "\14\25"
+    end
+
     return "\25"
   end
 
