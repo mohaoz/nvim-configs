@@ -154,7 +154,7 @@ end
 
 local function cpp_compile_command()
   if is_windows and msys_bash ~= nil then
-    local command = 'workdir=`/usr/bin/cygpath -u "$1"`; src=`/usr/bin/cygpath -u "$2"`; cd "$workdir" || exit; MSYSTEM=UCRT64 TMPDIR=. TMP=. TEMP=. /ucrt64/bin/g++ -Wall "$src" -o '
+    local command = 'workdir=`/usr/bin/cygpath -u "$()1"`; src=`/usr/bin/cygpath -u "$()2"`; cd "$()workdir" || exit; MSYSTEM=UCRT64 TMPDIR=. TMP=. TEMP=. /ucrt64/bin/g++ -Wall "$()src" -o '
       .. cpp_executable
       .. " -std=gnu++23"
 
@@ -178,7 +178,7 @@ local function cpp_run_command()
   if is_windows and msys_bash ~= nil then
     return {
       exec = msys_bash,
-      args = { "-lc", 'workdir=`/usr/bin/cygpath -u "$1"`; cd "$workdir" || exit; MSYSTEM=UCRT64 ./' .. cpp_executable, "competitest", "$(ABSDIR)/.competitest" },
+      args = { "-lc", 'workdir=`/usr/bin/cygpath -u "$()1"`; cd "$()workdir" || exit; MSYSTEM=UCRT64 ./' .. cpp_executable, "competitest", "$(ABSDIR)/.competitest" },
     }
   end
 
