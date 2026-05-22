@@ -121,7 +121,6 @@ local git = first_executable(vim.list_extend({
 }, msys_bin_candidates("git.exe"))) or "git"
 local cpp_compiler = first_executable(cpp_compiler_candidates()) or "g++"
 local cpp_executable = is_windows and "solution.exe" or "$(FNOEXT)"
-local msys_bash = first_executable({ "C:/msys64/usr/bin/bash.exe", "/usr/bin/bash.exe", "bash.exe", "bash" })
 local cpp_template = first_file({
   "~/code/.template.cpp",
   "~/Library/Mobile Documents/com~apple~CloudDocs/code/.template.cpp",
@@ -153,21 +152,6 @@ local function cpp_compile_args(source)
 end
 
 local function cpp_compile_command()
-  if is_windows and msys_bash ~= nil then
-    local command = 'workdir=`/usr/bin/cygpath -u "$()1"`; src=`/usr/bin/cygpath -u "$()2"`; cd "$()workdir" || exit; MSYSTEM=UCRT64 TMPDIR=. TMP=. TEMP=. /ucrt64/bin/g++ -Wall "$()src" -o '
-      .. cpp_executable
-      .. " -std=gnu++23"
-
-    if has_stdcpp_exp(cpp_compiler) then
-      command = command .. " -lstdc++exp"
-    end
-
-    return {
-      exec = msys_bash,
-      args = { "-lc", command, "competitest", "$(ABSDIR)/.competitest", "$(FABSPATH)" },
-    }
-  end
-
   return {
     exec = cpp_compiler,
     args = cpp_compile_args(is_windows and "$(FABSPATH)" or "$(FNAME)"),
@@ -175,13 +159,6 @@ local function cpp_compile_command()
 end
 
 local function cpp_run_command()
-  if is_windows and msys_bash ~= nil then
-    return {
-      exec = msys_bash,
-      args = { "-lc", 'workdir=`/usr/bin/cygpath -u "$()1"`; cd "$()workdir" || exit; MSYSTEM=UCRT64 ./' .. cpp_executable, "competitest", "$(ABSDIR)/.competitest" },
-    }
-  end
-
   return {
     exec = "./" .. cpp_executable,
   }
