@@ -10,6 +10,25 @@ local is_windows = vim.fn.has("win32") == 1 or sysname == "Windows_NT" or is_msy
 local is_termux = vim.fn.stdpath("config"):find("com.termux", 1, true) ~= nil
   or (vim.env.PREFIX or ""):find("com.termux", 1, true) ~= nil
 
+if not vim.g.mohao_safe_notify_fast_event then
+  vim.g.mohao_safe_notify_fast_event = true
+
+  local unpack = table.unpack or unpack
+  local notify = vim.notify
+
+  vim.notify = function(...)
+    if not vim.in_fast_event() then
+      return notify(...)
+    end
+
+    local argc = select("#", ...)
+    local args = { ... }
+    vim.schedule(function()
+      notify(unpack(args, 1, argc))
+    end)
+  end
+end
+
 local function fs_exists(path)
   return type(path) == "string" and path ~= "" and uv.fs_stat(path) ~= nil
 end
@@ -101,7 +120,8 @@ local git = first_executable(vim.list_extend({
   "/usr/bin/git.exe",
 }, msys_bin_candidates("git.exe"))) or "git"
 local cpp_compiler = first_executable(cpp_compiler_candidates()) or "g++"
-local cpp_executable = "$(FNOEXT)" .. (is_windows and ".exe" or "")
+local cpp_executable = is_windows and "solution.exe" or "$(FNOEXT)"
+local msys_bash = first_executable({ "C:/msys64/usr/bin/bash.exe", "/usr/bin/bash.exe", "bash.exe", "bash" })
 local cpp_template = first_file({
   "~/code/.template.cpp",
   "~/Library/Mobile Documents/com~apple~CloudDocs/code/.template.cpp",
@@ -116,10 +136,10 @@ local function has_stdcpp_exp(compiler)
   return vim.v.shell_error == 0 and output ~= "" and output ~= "libstdc++exp.a" and fs_exists(output)
 end
 
-local function cpp_compile_args()
+local function cpp_compile_args(source)
   local args = {
     "-Wall",
-    "$(FNAME)",
+    source or "$(FNAME)",
     "-o",
     cpp_executable,
     "-std=gnu++23",
@@ -130,6 +150,41 @@ local function cpp_compile_args()
   end
 
   return args
+end
+
+local function cpp_compile_command()
+  if is_windows and msys_bash ~= nil then
+    local command = 'workdir=`/usr/bin/cygpath -u "$1"`; src=`/usr/bin/cygpath -u "$2"`; cd "$workdir" || exit; MSYSTEM=UCRT64 TMPDIR=. TMP=. TEMP=. /ucrt64/bin/g++ -Wall "$src" -o '
+      .. cpp_executable
+      .. " -std=gnu++23"
+
+    if has_stdcpp_exp(cpp_compiler) then
+      command = command .. " -lstdc++exp"
+    end
+
+    return {
+      exec = msys_bash,
+      args = { "-lc", command, "competitest", "$(ABSDIR)/.competitest", "$(FABSPATH)" },
+    }
+  end
+
+  return {
+    exec = cpp_compiler,
+    args = cpp_compile_args(is_windows and "$(FABSPATH)" or "$(FNAME)"),
+  }
+end
+
+local function cpp_run_command()
+  if is_windows and msys_bash ~= nil then
+    return {
+      exec = msys_bash,
+      args = { "-lc", 'workdir=`/usr/bin/cygpath -u "$1"`; cd "$workdir" || exit; MSYSTEM=UCRT64 ./' .. cpp_executable, "competitest", "$(ABSDIR)/.competitest" },
+    }
+  end
+
+  return {
+    exec = "./" .. cpp_executable,
+  }
 end
 
 if not fs_exists(mini_path) then
@@ -257,14 +312,13 @@ add({
 })
 now(function()
   local competitest_config = {
+    compile_directory = ".competitest",
+    running_directory = ".competitest",
     compile_command = {
-      cpp = {
-        exec = cpp_compiler,
-        args = cpp_compile_args(),
-      },
+      cpp = cpp_compile_command(),
     },
     run_command = {
-      cpp = { exec = "./" .. cpp_executable },
+      cpp = cpp_run_command(),
     },
   }
 
@@ -309,8 +363,14 @@ now(function()
   })
 
   require("mini.completion").setup({
+    delay = {
+      completion = 50,
+      info = 50,
+      signature = 25,
+    },
     lsp_completion = {
       source_func = "omnifunc",
+      auto_setup = false,
       process_items = function(items, base)
         return MiniCompletion.default_process_items(items, base, {
           filtersort = "fuzzy",
@@ -324,6 +384,12 @@ now(function()
   })
 
   local capabilities = require("mini.completion").get_lsp_capabilities()
+
+  vim.api.nvim_create_autocmd("LspAttach", {
+    callback = function(ev)
+      vim.bo[ev.buf].omnifunc = "v:lua.MiniCompletion.completefunc_lsp"
+    end,
+  })
 
   local clangd = first_executable({ "clangd", "clangd.exe" })
   if clangd ~= nil then
