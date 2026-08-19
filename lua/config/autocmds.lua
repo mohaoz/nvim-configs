@@ -10,6 +10,8 @@ vim.api.nvim_create_autocmd("FileType", {
   pattern = { "c", "cpp" },
   callback = function()
     vim.opt_local.cindent = true
+    vim.opt_local.foldmethod = "syntax"
+    vim.opt_local.foldenable = true
   end,
 })
 

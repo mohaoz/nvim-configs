@@ -55,15 +55,6 @@ local function first_executable(candidates)
   end
 end
 
-local function first_file(candidates)
-  for _, path in ipairs(candidates) do
-    local expanded = vim.fn.expand(path)
-    if fs_exists(expanded) then
-      return expanded
-    end
-  end
-end
-
 local msys_prefixes = {
   "C:/msys64/ucrt64",
   "C:/msys64/mingw64",
@@ -120,49 +111,6 @@ local git = first_executable(vim.list_extend({
   "/usr/bin/git.exe",
 }, msys_bin_candidates("git.exe"))) or "git"
 local cpp_compiler = first_executable(cpp_compiler_candidates()) or "g++"
-local cpp_executable = is_windows and "solution.exe" or "$(FNOEXT)"
-local cpp_template = first_file({
-  "~/code/.template.cpp",
-  "~/Library/Mobile Documents/com~apple~CloudDocs/code/.template.cpp",
-})
-
-local function has_stdcpp_exp(compiler)
-  if compiler == nil or compiler == "" then
-    return false
-  end
-
-  local output = vim.trim(vim.fn.system({ compiler, "-print-file-name=libstdc++exp.a" }))
-  return vim.v.shell_error == 0 and output ~= "" and output ~= "libstdc++exp.a" and fs_exists(output)
-end
-
-local function cpp_compile_args(source)
-  local args = {
-    "-Wall",
-    source or "$(FNAME)",
-    "-o",
-    cpp_executable,
-    "-std=gnu++23",
-  }
-
-  if has_stdcpp_exp(cpp_compiler) then
-    table.insert(args, "-lstdc++exp")
-  end
-
-  return args
-end
-
-local function cpp_compile_command()
-  return {
-    exec = cpp_compiler,
-    args = cpp_compile_args(is_windows and "$(FABSPATH)" or "$(FNAME)"),
-  }
-end
-
-local function cpp_run_command()
-  return {
-    exec = "./" .. cpp_executable,
-  }
-end
 
 if not fs_exists(mini_path) then
   vim.fn.system({ git, "clone", "--filter=blob:none", "https://github.com/echasnovski/mini.nvim", mini_path })
@@ -284,29 +232,22 @@ now(function()
 end, { source = "echasnovski/mini.pairs" })
 
 add({
-  source = "xeluxee/competitest.nvim",
-  depends = { "MunifTanjim/nui.nvim" },
+  source = "mohaoz/fastolympiccoding.nvim",
+  depends = {
+    {
+      source = "mbrea-c/fibrous.nvim",
+      checkout = "a6042fec23ba12340589cd33c6ba3c717125e7c5",
+    },
+  },
 })
 now(function()
-  local competitest_config = {
-    compile_directory = ".competitest",
-    running_directory = ".competitest",
-    compile_command = {
-      cpp = cpp_compile_command(),
-    },
-    run_command = {
-      cpp = cpp_run_command(),
-    },
-  }
+  require("fastolympiccoding").setup()
+end)
 
-  if cpp_template ~= nil then
-    competitest_config.template_file = {
-      cpp = cpp_template,
-    }
-  end
-
-  require("competitest").setup(competitest_config)
-end, { source = "xeluxee/competitest.nvim" })
+add({ source = "mohaoz/fastolympiccoding-hook.nvim" })
+now(function()
+  require("fastolympiccoding_hook").setup()
+end)
 
 if not is_termux then
   add({ source = "mistricky/codesnap.nvim" })
@@ -325,6 +266,7 @@ if not is_termux then
         },
       },
     })
+    require("config.codesnap").setup()
   end, { source = "mistricky/codesnap.nvim" })
 end
 
