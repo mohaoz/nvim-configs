@@ -28,6 +28,7 @@ o.autoindent = true
 o.smartindent = true
 o.number = true
 o.relativenumber = true
+o.mouse = ""
 
 o.cursorline = true
 o.termguicolors = true
