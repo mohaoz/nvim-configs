@@ -2,3 +2,6 @@
 .agents/
 .codex/
 nvim.log
+
+# Machine-local overrides
+/after/plugin/local.lua

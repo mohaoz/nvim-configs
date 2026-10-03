@@ -91,6 +91,9 @@ local function cpp_compiler_candidates()
 
   if is_macos then
     return {
+      "/opt/homebrew/bin/g++-16",
+      "/usr/local/bin/g++-16",
+      "g++-16",
       "/opt/homebrew/bin/g++-15",
       "/usr/local/bin/g++-15",
       "g++-15",
@@ -101,7 +104,7 @@ local function cpp_compiler_candidates()
     }
   end
 
-  return { "g++-15", "g++-14", "g++-13", "g++" }
+  return { "g++-16", "g++-15", "g++-14", "g++-13", "g++" }
 end
 
 local git = first_executable(vim.list_extend({
@@ -240,8 +243,22 @@ add({
     },
   },
 })
+
 now(function()
-  require("fastolympiccoding").setup()
+  require("fastolympiccoding").setup({
+    compiler = {
+      cpp = {
+        cpp_compiler,
+        "-std=c++20",
+        "-O2",
+        "-g",
+        "-pipe",
+        "{source}",
+        "-o",
+        "{exe}",
+      },
+    },
+  })
 end)
 
 add({ source = "mohaoz/fastolympiccoding-hook.nvim" })
