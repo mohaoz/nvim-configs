@@ -312,16 +312,24 @@ now(function()
 
   local clangd = first_executable({ "clangd", "clangd.exe" })
   if clangd ~= nil then
-    vim.lsp.config["clangd"] = {
+    require("config.cpp").setup(clangd, cpp_compiler, capabilities)
+  end
+
+  local rust_analyzer = first_executable({ "rust-analyzer", "rust-analyzer.exe" })
+  if rust_analyzer ~= nil then
+    vim.lsp.config["rust_analyzer"] = {
       capabilities = capabilities,
-      filetypes = { "c", "cpp", "objc", "objcpp", "cuda", "proto" },
-      cmd = {
-        clangd,
-        "--header-insertion=never",
-        "--query-driver=" .. cpp_compiler,
+      cmd = { rust_analyzer },
+      filetypes = { "rust" },
+      root_markers = { "Cargo.toml", "rust-project.json", ".git" },
+      settings = {
+        ["rust-analyzer"] = {
+          cargo = { allTargets = true },
+          procMacro = { enable = true },
+        },
       },
     }
-    vim.lsp.enable("clangd")
+    vim.lsp.enable("rust_analyzer")
   end
 
   vim.g.zig_fmt_parse_errors = 0

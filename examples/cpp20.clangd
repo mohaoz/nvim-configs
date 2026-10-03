@@ -1,0 +1,7 @@
+# Copy to .clangd in a directory of standalone C++ exercises.
+# Real projects should use their own compile_commands.json instead.
+If:
+  PathMatch: .*\.(cpp|cc|cxx|hpp|hh|hxx)
+CompileFlags:
+  Compiler: g++
+  Add: [-std=c++20, -Wall, -Wextra]

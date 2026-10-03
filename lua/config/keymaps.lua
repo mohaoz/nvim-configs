@@ -5,7 +5,17 @@ local opts = {
 }
 
 k.set("n", "<leader>e", function()
-  require("mini.files").open(vim.api.nvim_buf_get_name(0))
+  local files = require("mini.files")
+  if files.get_explorer_state() ~= nil then
+    files.close()
+    return
+  end
+
+  local path = vim.api.nvim_buf_get_name(0)
+  if vim.bo.buftype ~= "" or (vim.fn.filereadable(path) == 0 and vim.fn.isdirectory(path) == 0) then
+    path = vim.fn.getcwd()
+  end
+  files.open(path)
 end, opts)
 k.set("n", "j", "v:count == 0 ? 'gj' : 'j'", { expr = true, silent = true})
 k.set("n", "k", "v:count == 0 ? 'gk' : 'k'", { expr = true, silent = true})
